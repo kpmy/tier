@@ -6,12 +6,7 @@ import (
 	"testing"
 )
 
-func TestScanner(t *testing.T) {
-	const testString = `
-		BEGIN
-
-		f asdf asdf xx x23 (* dfa3asd *) 33FH 3FU 234U 3.3  : := :== > < 0.12314 003141 -efef23 asdfd asf "dfsdfa sdf asdf " 'df' df'd' ;;      ;
-	`
+func defTestOpts() Opts {
 	defaultOpts := Opts{}
 	defaultOpts.IdentMap = make(map[string]SymCode)
 	defaultOpts.IdentMap["BEGIN"] = 100
@@ -33,8 +28,17 @@ func TestScanner(t *testing.T) {
 	defaultOpts.CombinedMap[";"] = 207
 
 	defaultOpts.CommentTriplet = [3]rune{'(', '*', ')'}
+	return defaultOpts
+}
 
-	sc := NewScanner(bufio.NewReader(bytes.NewBufferString(testString)), defaultOpts)
+func TestScanner(t *testing.T) {
+	const testString = `
+		BEGIN
+
+		f asdf asdf xx x23 (* dfa3asd *) 33FH 3FU 234U 3.3  : := :== > < 0.12314 003141 -efef23 asdfd asf "dfsdfa sdf asdf " 'df' df'd' ;;      ;
+	`
+
+	sc := NewScanner(bufio.NewReader(bytes.NewBufferString(testString)), defTestOpts())
 	for sc.Error() == nil {
 		t.Log(sc.Get())
 	}
@@ -46,29 +50,8 @@ func TestRunner(t *testing.T) {
 
 		f asdf asdf xx x23 (* dfa3asd *) 33FH 3FU 234U 3.3  : := :== > < 0.12314 003141 -efef23 asdfd asf "dfsdfa sdf asdf " 'df' df'd' ;;      ;
 	`
-	defaultOpts := Opts{}
-	defaultOpts.IdentMap = make(map[string]SymCode)
-	defaultOpts.IdentMap["BEGIN"] = 100
 
-	defaultOpts.SpaceMap = make(map[string]SymCode)
-	defaultOpts.SpaceMap[" "] = 101
-	defaultOpts.SpaceMap["\n"] = 102
-
-	defaultOpts.NumContains = "ABCDEF"
-	defaultOpts.NumModifiers = "UH"
-
-	defaultOpts.CombinedMap = make(map[string]SymCode)
-	defaultOpts.CombinedMap[":"] = 200
-	defaultOpts.CombinedMap[":="] = 201
-	defaultOpts.CombinedMap[":=="] = 203
-	defaultOpts.CombinedMap[">"] = 204
-	defaultOpts.CombinedMap["<"] = 205
-	defaultOpts.CombinedMap["-"] = 206
-	defaultOpts.CombinedMap[";"] = 207
-
-	defaultOpts.CommentTriplet = [3]rune{'(', '*', ')'}
-
-	sc := NewScanner(bufio.NewReader(bytes.NewBufferString(testString)), defaultOpts)
+	sc := NewScanner(bufio.NewReader(bytes.NewBufferString(testString)), defTestOpts())
 	run := NewRunner(sc, NewMarker(sc, func(msg ...interface{}) {
 		t.Log(msg...)
 	}))
@@ -83,29 +66,8 @@ func TestMapper(t *testing.T) {
 
 		f asdf asdf xx x23 (* dfa3asd *) 33FH 3FU 234U 3.3  : := :== > < 0.12314 003141 -efef23 asdfd asf "dfsdfa sdf asdf " 'df' df'd' ;;      ;
 	`
-	defaultOpts := Opts{}
-	defaultOpts.IdentMap = make(map[string]SymCode)
-	defaultOpts.IdentMap["BEGIN"] = 100
 
-	defaultOpts.SpaceMap = make(map[string]SymCode)
-	defaultOpts.SpaceMap[" "] = 101
-	defaultOpts.SpaceMap["\n"] = 102
-
-	defaultOpts.NumContains = "ABCDEF"
-	defaultOpts.NumModifiers = "UH"
-
-	defaultOpts.CombinedMap = make(map[string]SymCode)
-	defaultOpts.CombinedMap[":"] = 200
-	defaultOpts.CombinedMap[":="] = 201
-	defaultOpts.CombinedMap[":=="] = 203
-	defaultOpts.CombinedMap[">"] = 204
-	defaultOpts.CombinedMap["<"] = 205
-	defaultOpts.CombinedMap["-"] = 206
-	defaultOpts.CombinedMap[";"] = 207
-
-	defaultOpts.CommentTriplet = [3]rune{'(', '*', ')'}
-
-	sc := NewScanner(bufio.NewReader(bytes.NewBufferString(testString)), defaultOpts)
+	sc := NewScanner(bufio.NewReader(bytes.NewBufferString(testString)), defTestOpts())
 	mp := NewMapper(sc)
 	run := NewRunner(mp, NewMarker(sc, func(msg ...interface{}) {
 		t.Log(msg...)
