@@ -15,8 +15,8 @@ func defTestOpts() Opts {
 	defaultOpts.SpaceMap[" "] = 101
 	defaultOpts.SpaceMap["\n"] = 102
 
-	defaultOpts.NumContains = "ABCDEF"
-	defaultOpts.NumModifiers = "UH"
+	defaultOpts.NumContains = func() string { return "ABCDEF" }
+	defaultOpts.NumModifiers = func() string { return "UH" }
 
 	defaultOpts.CombinedMap = make(map[string]SymCode)
 	defaultOpts.CombinedMap[":"] = 200

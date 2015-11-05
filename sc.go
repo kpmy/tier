@@ -16,6 +16,8 @@ const (
 	Ident
 	Number
 	String
+
+	UserIota = 100
 )
 
 type Symbol struct {
@@ -34,11 +36,11 @@ type Symbol struct {
 
 type Opts struct {
 	IdentMap      map[string]SymCode
-	IdentStarts   string
-	IdentContains string
+	IdentStarts   func() string
+	IdentContains func() string
 
-	NumContains  string
-	NumModifiers string
+	NumContains  func() string
+	NumModifiers func() string
 
 	SpaceMap map[string]SymCode
 
@@ -126,12 +128,40 @@ func (s *sc) mark(msg ...interface{}) {
 	panic(Err("scanner", s.Count(), l, c, msg...))
 }
 
+func (o Opts) safeIdentContains() string {
+	if o.IdentContains != nil {
+		return o.IdentContains()
+	}
+	return ""
+}
+
+func (o Opts) safeIdentStarts() string {
+	if o.IdentStarts != nil {
+		return o.IdentStarts()
+	}
+	return ""
+}
+
+func (o Opts) safeNumContains() string {
+	if o.NumContains != nil {
+		return o.NumContains()
+	}
+	return ""
+}
+
+func (o Opts) safeNumModifiers() string {
+	if o.NumContains != nil {
+		return o.NumModifiers()
+	}
+	return ""
+}
+
 func (o Opts) isIdentLetter(r rune) bool {
-	return o.isIdentFirstLetter(r) || unicode.IsDigit(r) || strings.ContainsRune(o.IdentContains, r)
+	return o.isIdentFirstLetter(r) || unicode.IsDigit(r) || strings.ContainsRune(o.safeIdentContains(), r)
 }
 
 func (o Opts) isIdentFirstLetter(r rune) bool {
-	return unicode.IsLetter(r) || strings.ContainsRune(o.IdentStarts, r)
+	return unicode.IsLetter(r) || strings.ContainsRune(o.safeIdentStarts(), r)
 }
 
 func (o Opts) validate() {
@@ -178,18 +208,18 @@ func (s *sc) num() (sym Symbol) {
 				s.mark("dot unexpected")
 			}
 		}
-		if s.err != nil || !(s.ch == '.' || strings.ContainsRune(dec, s.ch) || strings.ContainsRune(s.opts.NumContains, s.ch)) {
+		if s.err != nil || !(s.ch == '.' || strings.ContainsRune(dec, s.ch) || strings.ContainsRune(s.opts.safeNumContains(), s.ch)) {
 			break
 		}
 	}
-	if strings.ContainsRune(s.opts.NumModifiers, s.ch) {
+	if strings.ContainsRune(s.opts.safeNumModifiers(), s.ch) {
 		mbuf = append(mbuf, s.ch)
 		s.next()
 	}
-	if strings.ContainsAny(string(buf), s.opts.NumContains) && len(mbuf) == 0 {
+	if strings.ContainsAny(string(buf), s.opts.safeNumContains()) && len(mbuf) == 0 {
 		s.mark("modifier expected")
 	}
-	if s.err == nil {
+	if s.err == nil || s.err == io.EOF {
 		sym.Code = Number
 		sym.Value = string(buf)
 		sym.NumberOpts.Modifier = string(mbuf)
@@ -343,24 +373,24 @@ func NewScanner(rd io.RuneReader, opts ...Opts) Scanner {
 	if len(opts) > 0 {
 		ret.opts = opts[0]
 	} else {
-		ret.opts = defaultOpts
+		ret.opts = DefaultOpts
 	}
 	ret.opts.validate()
 	ret.next()
 	return ret
 }
 
-var defaultOpts Opts
+var DefaultOpts Opts
 
 func init() {
-	defaultOpts.IdentMap = make(map[string]SymCode)
+	DefaultOpts.IdentMap = make(map[string]SymCode)
 
-	defaultOpts.SpaceMap = make(map[string]SymCode)
+	DefaultOpts.SpaceMap = make(map[string]SymCode)
 
-	defaultOpts.NumContains = "ABCDEF"
-	defaultOpts.NumModifiers = "U"
+	DefaultOpts.NumContains = func() string { return "ABCDEF" }
+	DefaultOpts.NumModifiers = func() string { return "U" }
 
-	defaultOpts.CombinedMap = make(map[string]SymCode)
+	DefaultOpts.CombinedMap = make(map[string]SymCode)
 
-	defaultOpts.CommentTriplet = [3]rune{'(', '*', ')'}
+	DefaultOpts.CommentTriplet = [3]rune{'(', '*', ')'}
 }

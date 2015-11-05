@@ -7,8 +7,10 @@ import (
 
 type Runner interface {
 	Next() Symbol
-	//expect is the most powerful step forward runner, breaks the compilation if unexpected sym found
+	//expect is the most powerful step forward runner, breaks the compilation if unexpected sym found, .Next should be called after handle .Sym()
 	Expect(SymCode, interface{}, ...SymCode)
+	//assert expects symbol and return it if success
+	Assert(SymCode, interface{}, ...SymCode) Symbol
 	//await runs for the sym through skip list, but may not find the sym
 	Await(SymCode, ...SymCode) bool
 	//pass runs through skip list
@@ -17,6 +19,7 @@ type Runner interface {
 	Run(SymCode)
 	//Is current symbol?
 	Is(SymCode) bool
+	Sym() Symbol
 }
 
 type rn struct {
@@ -39,16 +42,24 @@ func (r *rn) Next() Symbol {
 
 //expect is the most powerful step forward runner, breaks the compilation if unexpected sym found
 func (r *rn) Expect(sym SymCode, msg interface{}, skip ...SymCode) {
-	assert.For(r.done, 20)
+	assert.For(r.done, 20, "previous symbol unhandled")
 	if !r.Await(sym, skip...) {
 		r.marker.Mark(msg)
 	}
 	r.done = false
 }
 
+func (r *rn) Assert(sym SymCode, msg interface{}, skip ...SymCode) (ret Symbol) {
+	assert.For(r.done, 20, "previous symbol unhandled")
+	r.Expect(sym, msg, skip...)
+	ret = r.Sym()
+	r.Next()
+	return
+}
+
 //await runs for the sym through skip list, but may not find the sym
 func (r *rn) Await(sym SymCode, skip ...SymCode) bool {
-	assert.For(r.done, 20)
+	assert.For(r.done, 20, "previous symbol unhandled")
 	skipped := func() (ret bool) {
 		for _, v := range skip {
 			if v == r.sym.Code {
@@ -95,6 +106,8 @@ func (r *rn) Run(sym SymCode) {
 func (r *rn) Is(sym SymCode) bool {
 	return r.sym.Code == sym
 }
+
+func (r *rn) Sym() Symbol { return r.sym }
 
 func NewRunner(s Scanner, m Marker) Runner {
 	ret := &rn{}
