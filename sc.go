@@ -47,6 +47,10 @@ type Opts struct {
 	CombinedMap map[string]SymCode
 
 	CommentTriplet [3]rune
+
+	Skip func(r rune) bool
+
+	NoStrings bool
 }
 
 type Scanner interface {
@@ -154,6 +158,13 @@ func (o Opts) safeNumModifiers() string {
 		return o.NumModifiers()
 	}
 	return ""
+}
+
+func (o Opts) safeSkip(r rune) (skip bool) {
+	if o.Skip != nil {
+		skip = o.Skip(r)
+	}
+	return
 }
 
 func (o Opts) isIdentLetter(r rune) bool {
@@ -329,6 +340,18 @@ func (s *sc) filter(r ...rune) SymCode {
 }
 
 func (s *sc) get() (sym Symbol) {
+	justRune := func() {
+		if symCode := s.filter(s.ch); symCode != None {
+			sym.Code = symCode
+			s.next()
+		} else {
+			if !s.opts.safeSkip(s.ch) {
+				s.mark("unhandled ", "`", Token(s.ch), "`")
+			}
+			s.next()
+		}
+	}
+
 	switch s.ch {
 	case s.opts.CommentTriplet[0]:
 		if s.next() == s.opts.CommentTriplet[1] {
@@ -339,9 +362,13 @@ func (s *sc) get() (sym Symbol) {
 			sym.Code = s.filter(s.opts.CommentTriplet[0])
 		}
 	case '"', '\'', '`':
-		sym.StringOpts.Apos = (s.ch == '\'' || s.ch == '`')
-		sym.Value = s.str()
-		sym.Code = String
+		if !s.opts.NoStrings {
+			sym.StringOpts.Apos = (s.ch == '\'' || s.ch == '`')
+			sym.Value = s.str()
+			sym.Code = String
+		} else {
+			justRune()
+		}
 	default:
 		switch {
 		case s.opts.isIdentFirstLetter(s.ch):
@@ -353,13 +380,7 @@ func (s *sc) get() (sym Symbol) {
 		case unicode.IsDigit(s.ch):
 			sym = s.num()
 		default:
-			if symCode := s.filter(s.ch); symCode != None {
-				sym.Code = symCode
-				s.next()
-			} else {
-				s.mark("unhandled ", "`", Token(s.ch), "`")
-				s.next()
-			}
+			justRune()
 		}
 	}
 	return
