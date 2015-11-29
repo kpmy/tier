@@ -51,6 +51,7 @@ type Opts struct {
 	Skip func(r rune) bool
 
 	NoStrings bool
+	NoNum     bool
 }
 
 type Scanner interface {
@@ -378,7 +379,11 @@ func (s *sc) get() (sym Symbol) {
 			sym.Code, _ = s.opts.SpaceMap[sym.Value]
 			s.next()
 		case unicode.IsDigit(s.ch):
-			sym = s.num()
+			if !s.opts.NoNum {
+				sym = s.num()
+			} else {
+				justRune()
+			}
 		default:
 			justRune()
 		}
